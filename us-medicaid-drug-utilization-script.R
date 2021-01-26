@@ -12,12 +12,17 @@
 
 library(dplyr)
 library(purrr)
+library(readr)
 library(tidylog)
 
 ## Download files
 
+## List out all the urls.
+## I can't find a way to pull these without having to manually copy and paste since the id is between
+## /views/ and /rows.csv?. It's not something I can just generate in a vector and pull from.
+
 urls <-
-  list("https://data.medicaid.gov/api/views/agzs-hwsn/rows.csv?accessType=DOWNLOAD", # 2020
+  c("https://data.medicaid.gov/api/views/agzs-hwsn/rows.csv?accessType=DOWNLOAD", # 2020
     "https://data.medicaid.gov/api/views/qnsz-yp89/rows.csv?accessType=DOWNLOAD", # 2019
     "https://data.medicaid.gov/api/views/e5ds-i36p/rows.csv?accessType=DOWNLOAD", # 2018
     "https://data.medicaid.gov/api/views/3v5r-x5x9/rows.csv?accessType=DOWNLOAD", # 2017
@@ -49,11 +54,36 @@ urls <-
     "https://data.medicaid.gov/api/views/q7kf-kjqz/rows.csv?accessType=DOWNLOAD"  # 1991
   )
 
+## Create a vector containing all the years.
+
 years <-
   c(2020:1991)
 
-download.file(
-    destfile = "./data/raw/medicaid-national-data-2020.csv",
-    url = "https://data.medicaid.gov/api/views/agzs-hwsn/rows.csv?accessType=DOWNLOAD",
-    method = "auto"
+## Create a vector containing the file names for each year.
+
+file_names <-
+  paste0(
+    "./data/raw/us-medicaid-data-",
+    "us-medicaid-data-",
+    years, 
+    ".csv"
+  )
+
+## Create a function that downloads the files.
+## Set up a function to pull from web.
+
+dl <-
+  safely(
+    ~ download.file(.x, .y, mode = "wb")
+  )
+
+## Execute the function on the urls.
+
+walk2(
+  urls,
+  file_names,
+  dl
 )
+
+map_df(file_names, ~read_csv)
+

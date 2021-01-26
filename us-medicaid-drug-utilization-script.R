@@ -64,7 +64,6 @@ years <-
 file_names <-
   paste0(
     "./data/raw/us-medicaid-data-",
-    "us-medicaid-data-",
     years, 
     ".csv"
   )
@@ -84,6 +83,3 @@ walk2(
   file_names,
   dl
 )
-
-map_df(file_names, ~read_csv)
-

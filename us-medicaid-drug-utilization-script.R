@@ -13,6 +13,7 @@
 library(dplyr)
 library(purrr)
 library(readr)
+library(sparklyr)
 library(tidylog)
 
 ## Download files
@@ -83,3 +84,29 @@ walk2(
   file_names,
   dl
 )
+
+## Combine all the datasets.
+
+medicaid_1991_2020 <-
+  map_dfr(
+    file_names,
+    ~ read_csv(
+      .,
+      col_types = cols_only(
+        `Utilization Type`        = col_character(),
+        "State"                   = col_character(),
+        "Year"                    = col_integer(),
+        "Quarter"                 = col_integer(),
+        `Product Name`            = col_character(),
+        "NDC"                     = col_guess(),
+        `Number of Prescriptions` = col_integer(),
+        `Suppression Used`        = col_character()
+      )
+    )
+  )
+
+## Need to do some data quality/integrity checks.
+
+medicaid_1991_2020_df %>%
+  group_by(Year) %>%
+  summarise(n = n())

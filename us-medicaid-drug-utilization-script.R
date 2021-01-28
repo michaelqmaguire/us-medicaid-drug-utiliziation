@@ -11,9 +11,9 @@
 ## Load packages
 
 library(dplyr)
+library(ggplot2)
 library(purrr)
 library(readr)
-library(sparklyr)
 library(tidylog)
 
 ## Download files
@@ -23,7 +23,7 @@ library(tidylog)
 ## /views/ and /rows.csv?. It's not something I can just generate in a vector and pull from.
 
 urls <-
-  c("https://data.medicaid.gov/api/views/agzs-hwsn/rows.csv?accessType=DOWNLOAD", # 2020
+  c("https://data.medicaid.gov/api/views/va5y-jhsv/rows.csv?accessType=DOWNLOAD", # 2020
     "https://data.medicaid.gov/api/views/qnsz-yp89/rows.csv?accessType=DOWNLOAD", # 2019
     "https://data.medicaid.gov/api/views/e5ds-i36p/rows.csv?accessType=DOWNLOAD", # 2018
     "https://data.medicaid.gov/api/views/3v5r-x5x9/rows.csv?accessType=DOWNLOAD", # 2017
@@ -98,15 +98,50 @@ medicaid_1991_2020 <-
         "Year"                    = col_integer(),
         "Quarter"                 = col_integer(),
         `Product Name`            = col_character(),
+        `Labeler Code`            = col_guess(),
+        `Product Code`            = col_guess(),
+        `Package Size`            = col_guess(),
         "NDC"                     = col_guess(),
-        `Number of Prescriptions` = col_integer(),
-        `Suppression Used`        = col_character()
+        `Number of Prescriptions` = col_guess(),
+        `Suppression Used`        = col_guess()
       )
     )
   )
 
 ## Need to do some data quality/integrity checks.
 
-medicaid_1991_2020_df %>%
-  group_by(Year) %>%
-  summarise(n = n())
+record_count_by_year <-
+  medicaid_1991_2020 %>%
+    group_by(Year) %>%
+    summarise(n = n())
+
+## Plot the observation counts by year.
+
+ggplot(data = record_count_by_year) +
+  # create a bar chart with year as x-axis and the count as the y-axis. Make it blue.
+  geom_col(aes(x = Year, y = n), fill = "dodgerblue2") + 
+  # Add a text field to each column. Format it so it has commas, and angle it 90 degrees. Change color and size.
+  geom_text(aes(x = Year, y = n, label = scales::comma(n), hjust = 2, angle = 90), color = "white", size = 5) +
+  # apply theme_ipsum_rc, my favorite theme
+  hrbrthemes::theme_ipsum_rc() +
+  # make sure all years are displayed on x-axis
+  scale_x_continuous(breaks = years) +
+  # format it so it doesn't show scientific notation.
+  scale_y_continuous(labels = scales::comma) + 
+  # remove grid lines, make the text on the x and y axis black.
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.text.x = element_text(color = "black"),
+        axis.text.y = element_text(color = "black")) + 
+  # finally, a title.
+  ggtitle("Record count distributions - Medicaid drug utilization data, 1991 to 2020")
+
+national_medicaid_data <-
+  medicaid_1991_2020 %>%
+    filter(State == "XX")
+
+state_level_medicaid_data <-
+  medicaid_1991_2020 %>%
+    filter(State != "XX")
+
+

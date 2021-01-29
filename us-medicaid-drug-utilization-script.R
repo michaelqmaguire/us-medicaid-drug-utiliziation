@@ -108,15 +108,48 @@ medicaid_1991_2020 <-
     )
   )
 
+## Remove the national level data into its own dataset.
+
+national_medicaid_data <-
+  medicaid_1991_2020 %>%
+    filter(State == "XX") %>%
+    janitor::clean_names() %>%
+    mutate_if(is.character, .funs = tolower)
+
+## Remove the state level data into its own dataset.
+
+state_level_medicaid_data <-
+  medicaid_1991_2020 %>%
+    filter(State != "XX") %>%
+    janitor::clean_names() %>%
+    mutate_if(is.character, .funs = tolower)
+
+## Create dataset that JHC wanted: distinct by labeler_code, product_code, package_size, product_name, and NDC.
+
+national_products <-
+  national_medicaid_data %>%
+  select(labeler_code, product_code, package_size, product_name, ndc)
+
+state_products <- 
+  state_level_medicaid_data %>%
+  select(labeler_code, product_code, package_size, product_name, ndc)
+
+all_products <-
+  union(
+    national_products,
+    state_products
+  )
+
 ## Need to do some data quality/integrity checks.
 
 record_count_by_year <-
   medicaid_1991_2020 %>%
-    group_by(Year) %>%
-    summarise(n = n())
+  group_by(Year) %>%
+  summarise(n = n())
 
 ## Plot the observation counts by year.
 
+png("./plots/record-count-by-year.png", width = 16, height = 9, res = 1200, units = "in")
 ggplot(data = record_count_by_year) +
   # create a bar chart with year as x-axis and the count as the y-axis. Make it blue.
   geom_col(aes(x = Year, y = n), fill = "dodgerblue2") + 
@@ -135,13 +168,70 @@ ggplot(data = record_count_by_year) +
         axis.text.y = element_text(color = "black")) + 
   # finally, a title.
   ggtitle("Record count distributions - Medicaid drug utilization data, 1991 to 2020")
+dev.off()
 
-national_medicaid_data <-
+## Create record counts by year/quarter.
+
+record_count_by_quarter <-
   medicaid_1991_2020 %>%
-    filter(State == "XX")
+  group_by(Year, Quarter) %>%
+  summarise(n = n())
 
-state_level_medicaid_data <-
-  medicaid_1991_2020 %>%
-    filter(State != "XX")
+## Plot observations by year/quarter
 
+png("./plots/record-count-by-year-and-quarter.png", width = 16, height = 9, res = 1200, units = "in")
+ggplot(data = record_count_by_quarter) +
+  # create a bar chart with year as x-axis and the count as the y-axis. Make it blue.
+  geom_col(aes(x = Year, y = n, fill = factor(Quarter))) + 
+  # Add a text field to each column. Format it so it has commas, and angle it 90 degrees. Change color and size.
+  # Group everything by quarter, change label text to black if it's quarter 4 (bar color is yellow), and adjust
+  # text such that it's centered in each bar.
+  geom_text(aes(x = Year, y = n, group = Quarter, label = scales::comma(n)),
+            angle = 90, color = ifelse(record_count_by_quarter$Quarter == 4, "black", "white"), size = 4, position = position_stack(vjust = .5)) +
+  # apply theme_ipsum_rc, my favorite theme
+  hrbrthemes::theme_ipsum_rc() +
+  # make sure all years are displayed on x-axis
+  scale_x_continuous(breaks = years) +
+  # format it so it doesn't show scientific notation.
+  scale_y_continuous(labels = scales::comma) + 
+  # remove grid lines, make the text on the x and y axis black.
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.text.x = element_text(color = "black"),
+        axis.text.y = element_text(color = "black")) + 
+  scale_fill_viridis_d() +
+  # finally, a title.
+  ggtitle("Record count distributions by quarter - Medicaid drug utilization data, 1991 to 2020")
+dev.off()
 
+## Output the entire Medicaid dataset
+
+write_csv(
+  medicaid_1991_2020,
+  file = "./data/clean/medicaid-data-1991-to-2020.csv",
+  na = ""
+)
+
+## Output the national dataset
+
+write_csv(
+  national_medicaid_data,
+  "./data/clean/national-level-medicaid-data-1991-to-2020.csv",
+  na = ""
+)
+
+## Output the state level dataset.
+
+write_csv(
+  state_level_medicaid_data,
+  "./data/clean/state-level-medicaid-data-1991-to-2020.csv",
+  na = ""
+)
+
+## Output the product information dataset requested by JHC.
+
+write_csv(
+  all_products,
+  "./data/clean/medicaid-product-information.csv",
+  na = ""
+)

@@ -1,4 +1,4 @@
-# us-medicaid-drug-utilziation
+# us-medicaid-drug-utiliziation
 
 The following script uses data from this website:
 
